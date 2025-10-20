@@ -5,20 +5,18 @@ import Vapor
 
 // configures your application
 public func configure(_ app: Application) throws {
-    // uncomment to serve files from /Public folder
-    // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
-
-    app.databases.use(.postgres(configuration: .init(
-        hostname: Environment.get("DATABASE_HOST") ?? "localhost",
-        port: Environment.get("DATABASE_PORT").flatMap(Int.init(_:)) ?? SQLPostgresConfiguration.ianaPortNumber,
-        username: Environment.get("DATABASE_USERNAME") ?? "vapor_username",
-        password: Environment.get("DATABASE_PASSWORD") ?? "vapor_password",
-        database: Environment.get("DATABASE_NAME") ?? "vapor_database",
-        tls: .prefer(try .init(configuration: .clientDefault)))
-    ), as: .psql)
-
-    app.migrations.add(CreateSongs())
-    try app.autoMigrate().wait()
+ 
+    if let databaseURL = Environment.get("DATABASE_URL") {
+            try app.databases.use(.postgres(url: databaseURL), as: .psql)
+        } else {
+            app.logger.warning("DATABASE_URL not set. Using default local configuration.")
+            app.databases.use(.postgres(
+                hostname: Environment.get("DATABASE_HOST") ?? "localhost",
+                username: Environment.get("DATABASE_USERNAME") ?? "vapor_username",
+                password: Environment.get("DATABASE_PASSWORD") ?? "vapor_password",
+                database: Environment.get("DATABASE_NAME") ?? "vapor_database"
+            ), as: .psql)
+        }
     
     // register routes
     try routes(app)
